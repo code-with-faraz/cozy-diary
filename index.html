@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 
+      Content-Security-Policy: This is a security feature to control what resources can be loaded.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+    <title>Cozy Diary</title>
+    
+    <!-- STYLES PART 1: This script loads the Tailwind CSS framework for styling. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- STYLES PART 2: These links load the custom fonts for our cozy theme. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    
+    <!-- STYLES PART 3: This <style> block contains all the custom CSS for colors, fonts, and the notepad look. -->
+    <style>
+        /* Custom styles for our cozy theme */
+        body {
+            font-family: 'Patrick Hand', cursive;
+            background-color: #fdf6e3; /* A soft, warm cream color */
+            color: #657b83; /* A muted, gentle text color */
+            -webkit-app-region: drag; /* This makes the entire window draggable */
+        }
+        
+        /* We must make interactive elements non-draggable so users can click them */
+        button, textarea, input, #entry-list, label {
+            -webkit-app-region: no-drag;
+        }
+
+        /* Custom scrollbar for a softer, more integrated look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #eee8d5; /* Lighter shade of the background */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d3cbb7; /* A soft brown */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b58900; /* A gentle highlight color on hover */
+        }
+
+        /* This CSS creates horizontal lines in the textarea, like a notepad */
+        #diary-entry {
+            background-image: linear-gradient(#eee8d5 1px, transparent 1px);
+            background-size: 100% 1.5em; /* Line height matches font size */
+            line-height: 1.5em;
+            border-color: #d3cbb7;
+        }
+    </style>
+</head>
+<body class="select-none overflow-hidden">
+    <div class="flex h-screen">
+        <!-- Sidebar for navigation and past entries -->
+        <div class="w-1/3 max-w-xs bg-[#eee8d5] p-4 flex flex-col shadow-lg">
+            <h1 class="text-3xl font-bold text-[#b58900] mb-4 font-['Gaegu']">Cozy Diary</h1>
+            <div class="mb-4">
+                <label for="date-picker" class="block text-sm font-medium text-[#586e75] mb-1">Select a Date:</label>
+                <input type="date" id="date-picker" class="w-full p-2 rounded-md border-2 border-[#d3cbb7] bg-[#fdf6e3] focus:outline-none focus:border-[#b58900]">
+            </div>
+            <h2 class="text-xl font-semibold text-[#586e75] mb-2 font-['Gaegu']">Past Entries</h2>
+            <div id="entry-list" class="flex-grow overflow-y-auto pr-2">
+                <!-- Entry links will be populated here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Main content area for writing -->
+        <div class="w-2/3 flex-grow flex flex-col p-6">
+            <div class="flex justify-between items-center mb-4">
+                 <h2 id="current-date-display" class="text-2xl font-semibold text-[#cb4b16]"></h2>
+                 <button id="save-button" class="bg-[#268bd2] hover:bg-[#2aa198] text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                    Save Entry
+                </button>
+            </div>
+            <textarea id="diary-entry" class="w-full h-full p-4 rounded-lg border-2 focus:outline-none text-lg bg-transparent" placeholder="What's on your mind today?"></textarea>
+            <div id="notification" class="fixed bottom-5 right-5 bg-[#859900] text-white py-2 px-4 rounded-lg shadow-xl opacity-0 transition-opacity duration-500">
+                Entry Saved!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Element References ---
+        const datePicker = document.getElementById('date-picker');
+        const currentDateDisplay = document.getElementById('current-date-display');
+        const diaryEntry = document.getElementById('diary-entry');
+        const saveButton = document.getElementById('save-button');
+        const entryList = document.getElementById('entry-list');
+        const notification = document.getElementById('notification');
+
+        // --- Application State ---
+        let selectedDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+        // --- Functions ---
+        
+        // Formats a date string (e.g., "2023-10-27") into a more readable format.
+        function formatDateForDisplay(dateString) {
+            const date = new Date(dateString + 'T00:00:00'); // Use T00:00:00 to avoid timezone-related date shifts
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Loads the diary entry for a given date from the main process.
+        async function loadEntry(date) {
+            selectedDate = date;
+            datePicker.value = date;
+            currentDateDisplay.textContent = formatDateForDisplay(date);
+            
+            // Call the 'loadEntry' function exposed in preload.js
+            const entry = await window.electronAPI.loadEntry(date);
+            diaryEntry.value = entry ? entry.content : '';
+        }
+
+        // Shows a brief notification message at the bottom-right of the screen.
+        function showNotification(message, duration = 2000) {
+            notification.textContent = message;
+            notification.classList.remove('opacity-0');
+            setTimeout(() => {
+                notification.classList.add('opacity-0');
+            }, duration);
+        }
+
+        // Fetches all entry dates and populates them in the sidebar.
+        async function populateEntryList() {
+            const dates = await window.electronAPI.getAllEntryDates();
+            // Sort dates descending so the most recent entries are at the top
+            dates.sort((a, b) => new Date(b) - new Date(a));
+
+            entryList.innerHTML = ''; // Clear the list before repopulating
+            if (dates.length === 0) {
+                entryList.innerHTML = `<p class="text-sm text-gray-500">No past entries yet.</p>`;
+                return;
+            }
+
+            dates.forEach(date => {
+                const entryItem = document.createElement('button');
+                entryItem.className = "w-full text-left p-2 rounded-md hover:bg-[#d3cbb7] focus:outline-none focus:bg-[#d3cbb7] transition-colors duration-200";
+                entryItem.textContent = formatDateForDisplay(date);
+                entryItem.onclick = () => loadEntry(date);
+                entryList.appendChild(entryItem);
+            });
+        }
+
+        // --- Event Listeners ---
+
+        // When the user picks a new date, load the entry for that date.
+        datePicker.addEventListener('change', (e) => {
+            loadEntry(e.target.value);
+        });
+
+        // When the user clicks "Save Entry", send the content to the main process.
+        saveButton.addEventListener('click', async () => {
+            const content = diaryEntry.value;
+            if (!content.trim()) {
+                showNotification("Cannot save an empty entry!", 3000);
+                return;
+            }
+            await window.electronAPI.saveEntry({ date: selectedDate, content });
+            showNotification('Entry Saved!');
+            await populateEntryList(); // Refresh the entry list in the sidebar
+        });
+
+        // --- Initial Load ---
+        
+        // When the page's content is fully loaded, initialize the application.
+        window.addEventListener('DOMContentLoaded', () => {
+            loadEntry(selectedDate); // Load today's entry (or a blank one)
+            populateEntryList();   // Load all past entry dates into the sidebar
+        });
+    </script>
+</body>
+</html>

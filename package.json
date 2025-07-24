@@ -1,0 +1,15 @@
+{
+  "name": "cozy-diary",
+  "version": "1.0.0",
+ "description": "A cute and cozy digital diary.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^37.2.4"
+  }
+}
