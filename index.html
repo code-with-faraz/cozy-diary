@@ -3,182 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 
-      Content-Security-Policy: This is a security feature to control what resources can be loaded.
-    -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
     <title>Cozy Diary</title>
-    
-    <!-- STYLES PART 1: This script loads the Tailwind CSS framework for styling. -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- STYLES PART 2: These links load the custom fonts for our cozy theme. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
-    
-    <!-- STYLES PART 3: This <style> block contains all the custom CSS for colors, fonts, and the notepad look. -->
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Gaegu:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for our cozy theme */
+        /* --- Self-Contained CSS - No Internet Required --- */
+        :root {
+            --bg-color: #fdf6e3; --sidebar-bg: #eee8d5; --text-color: #657b83;
+            --header-color: #b58900; --accent-color: #268bd2; --accent-hover: #2aa198;
+            --date-color: #cb4b16; --border-color: #d3cbb7; --notification-bg: #859900;
+        }
+        /* Cozy font-face: Comic Sans MS as fallback, or Segoe Print if available */
+        @font-face {
+            font-family: 'CozyHand';
+            src: local('Segoe Print'), local('Comic Sans MS');
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Patrick Hand', cursive;
-            background-color: #fdf6e3; /* A soft, warm cream color */
-            color: #657b83; /* A muted, gentle text color */
-            -webkit-app-region: drag; /* This makes the entire window draggable */
+            font-family: 'Patrick Hand', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, 'Verdana', 'Geneva', sans-serif;
+            font-size: 16px; background-color: var(--bg-color); color: var(--text-color);
+            -webkit-app-region: drag; overflow: hidden; user-select: none;
         }
-        
-        /* We must make interactive elements non-draggable so users can click them */
-        button, textarea, input, #entry-list, label {
-            -webkit-app-region: no-drag;
+        button, textarea, input, label, #entry-list { -webkit-app-region: no-drag; }
+        .app-wrapper { display: flex; height: 100vh; }
+        .sidebar {
+            width: 33.33%; max-width: 280px; background-color: var(--sidebar-bg);
+            padding: 1rem; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
-
-        /* Custom scrollbar for a softer, more integrated look */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .main-content { flex-grow: 1; padding: 1.5rem; display: flex; flex-direction: column; }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        h1 { font-family: 'Gaegu', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, 'Georgia', 'Times New Roman', serif; font-size: 2rem; font-weight: 700; color: var(--header-color); margin-bottom: 1rem; }
+        h2 { font-family: 'Gaegu', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, 'Georgia', 'Times New Roman', serif; font-size: 1.25rem; font-weight: 400; margin-bottom: 0.5rem; }
+        #current-date-display { color: var(--date-color); }
+        label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; }
+        input[type="date"] {
+            width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 2px solid var(--border-color);
+            background-color: var(--bg-color); outline: none; margin-bottom: 1rem;
         }
-        ::-webkit-scrollbar-track {
-            background: #eee8d5; /* Lighter shade of the background */
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #d3cbb7; /* A soft brown */
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #b58900; /* A gentle highlight color on hover */
-        }
-
-        /* This CSS creates horizontal lines in the textarea, like a notepad */
+        input[type="date"]:focus { border-color: var(--header-color); }
         #diary-entry {
-            background-image: linear-gradient(#eee8d5 1px, transparent 1px);
-            background-size: 100% 1.5em; /* Line height matches font size */
-            line-height: 1.5em;
-            border-color: #d3cbb7;
+            width: 100%; flex-grow: 1; padding: 1rem; border-radius: 0.375rem;
+            border: 2px solid var(--border-color); outline: none; font-size: 1.125rem;
+            background-image: linear-gradient(var(--sidebar-bg) 1px, transparent 1px);
+            background-size: 100% 1.5em; line-height: 1.5em; background-color: transparent;
+            font-family: 'Patrick Hand', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, 'Verdana', 'Geneva', sans-serif;
+        }
+        #save-button {
+            background-color: var(--accent-color); color: white; font-weight: bold;
+            padding: 0.5rem 1rem; border-radius: 0.5rem; border: none; cursor: pointer;
+            transition: background-color 0.3s;
+            font-family: 'Patrick Hand', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, inherit;
+        }
+        #save-button:hover { background-color: var(--accent-hover); }
+        #entry-list { flex-grow: 1; overflow-y: auto; padding-right: 0.5rem; }
+        #entry-list button {
+            width: 100%; text-align: left; padding: 0.5rem; border-radius: 0.375rem;
+            border: none; background-color: transparent; cursor: pointer; transition: background-color 0.2s;
+            font-family: 'Patrick Hand', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, inherit;
+        }
+        #entry-list button:hover, #entry-list button:focus { background-color: var(--border-color); }
+        #notification {
+            position: fixed; bottom: 1.25rem; right: 1.25rem; background-color: var(--notification-bg);
+            color: white; padding: 0.5rem 1rem; border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0; transition: opacity 0.5s;
+            font-family: 'Patrick Hand', 'CozyHand', 'Comic Sans MS', 'Segoe Print', cursive, inherit;
+        }
+        #error-overlay { display: none; }
+        #error-overlay.visible {
+            display: flex; position: fixed; inset: 0; background-color: rgba(127, 29, 29, 0.95);
+            align-items: center; justify-content: center; color: white; padding: 2rem; z-index: 50; text-align: center;
+        }
+        #error-overlay pre {
+            background-color: #450a0a; padding: 1rem; border-radius: 0.5rem;
+            text-align: left; font-size: 0.875rem; white-space: pre-wrap; font-family: monospace; margin-top: 1rem;
         }
     </style>
 </head>
-<body class="select-none overflow-hidden">
-    <div class="flex h-screen">
-        <!-- Sidebar for navigation and past entries -->
-        <div class="w-1/3 max-w-xs bg-[#eee8d5] p-4 flex flex-col shadow-lg">
-            <h1 class="text-3xl font-bold text-[#b58900] mb-4 font-['Gaegu']">Cozy Diary</h1>
-            <div class="mb-4">
-                <label for="date-picker" class="block text-sm font-medium text-[#586e75] mb-1">Select a Date:</label>
-                <input type="date" id="date-picker" class="w-full p-2 rounded-md border-2 border-[#d3cbb7] bg-[#fdf6e3] focus:outline-none focus:border-[#b58900]">
-            </div>
-            <h2 class="text-xl font-semibold text-[#586e75] mb-2 font-['Gaegu']">Past Entries</h2>
-            <div id="entry-list" class="flex-grow overflow-y-auto pr-2">
-                <!-- Entry links will be populated here by JavaScript -->
-            </div>
+<body>
+    <div id="app-container" class="app-wrapper">
+        <div class="sidebar">
+            <h1>Cozy Diary</h1>
+            <div><label for="date-picker">Select a Date:</label><input type="date" id="date-picker"></div>
+            <h2>Past Entries</h2>
+            <div id="entry-list"></div>
         </div>
-
-        <!-- Main content area for writing -->
-        <div class="w-2/3 flex-grow flex flex-col p-6">
-            <div class="flex justify-between items-center mb-4">
-                 <h2 id="current-date-display" class="text-2xl font-semibold text-[#cb4b16]"></h2>
-                 <button id="save-button" class="bg-[#268bd2] hover:bg-[#2aa198] text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
-                    Save Entry
-                </button>
-            </div>
-            <textarea id="diary-entry" class="w-full h-full p-4 rounded-lg border-2 focus:outline-none text-lg bg-transparent" placeholder="What's on your mind today?"></textarea>
-            <div id="notification" class="fixed bottom-5 right-5 bg-[#859900] text-white py-2 px-4 rounded-lg shadow-xl opacity-0 transition-opacity duration-500">
-                Entry Saved!
-            </div>
+        <div class="main-content">
+            <div class="main-header"><h2 id="current-date-display"></h2><button id="save-button">Save Entry</button></div>
+            <textarea id="diary-entry" placeholder="What's on your mind today?"></textarea>
         </div>
     </div>
+    <div id="notification"></div>
+    <div id="error-overlay"><div class="content"><h2>A Critical Error Occurred!</h2><pre id="error-message"></pre></div></div>
 
     <script>
-        // --- DOM Element References ---
-        const datePicker = document.getElementById('date-picker');
-        const currentDateDisplay = document.getElementById('current-date-display');
-        const diaryEntry = document.getElementById('diary-entry');
-        const saveButton = document.getElementById('save-button');
-        const entryList = document.getElementById('entry-list');
-        const notification = document.getElementById('notification');
+        // This script will not run until the entire window, including all its content, is ready.
+        window.onload = () => {
+            try {
+                // --- 1. Check for the API bridge from preload.js ---
+                if (!window.electronAPI) {
+                    throw new Error('The API bridge (electronAPI) is missing. The preload.js script failed to run.');
+                }
 
-        // --- Application State ---
-        let selectedDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                // --- 2. Get all required HTML elements ---
+                const elements = {
+                    datePicker: document.getElementById('date-picker'),
+                    currentDateDisplay: document.getElementById('current-date-display'),
+                    diaryEntry: document.getElementById('diary-entry'),
+                    saveButton: document.getElementById('save-button'),
+                    entryList: document.getElementById('entry-list'),
+                    notification: document.getElementById('notification'),
+                };
+                for (const key in elements) {
+                    if (!elements[key]) throw new Error(`Essential HTML element with id '${key}' could not be found.`);
+                }
 
-        // --- Functions ---
-        
-        // Formats a date string (e.g., "2023-10-27") into a more readable format.
-        function formatDateForDisplay(dateString) {
-            const date = new Date(dateString + 'T00:00:00'); // Use T00:00:00 to avoid timezone-related date shifts
-            return date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        }
+                let selectedDate = new Date().toISOString().split('T')[0];
 
-        // Loads the diary entry for a given date from the main process.
-        async function loadEntry(date) {
-            selectedDate = date;
-            datePicker.value = date;
-            currentDateDisplay.textContent = formatDateForDisplay(date);
-            
-            // Call the 'loadEntry' function exposed in preload.js
-            const entry = await window.electronAPI.loadEntry(date);
-            diaryEntry.value = entry ? entry.content : '';
-        }
+                // --- 3. Define all functions ---
+                const formatDateForDisplay = (dateString) => new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const showNotification = (message, duration = 2000) => {
+                    elements.notification.textContent = message;
+                    elements.notification.style.opacity = '1';
+                    setTimeout(() => { elements.notification.style.opacity = '0'; }, duration);
+                };
+                const populateEntryList = async () => {
+                    const dates = await window.electronAPI.getAllEntryDates();
+                    dates.sort((a, b) => new Date(b) - new Date(a));
+                    elements.entryList.innerHTML = '';
+                    if (dates.length === 0) {
+                        elements.entryList.innerHTML = `<p style="font-size: 0.875rem;">No past entries yet.</p>`;
+                        return;
+                    }
+                    dates.forEach(date => {
+                        const entryItem = document.createElement('button');
+                        entryItem.textContent = formatDateForDisplay(date);
+                        entryItem.onclick = () => loadEntry(date);
+                        elements.entryList.appendChild(entryItem);
+                    });
+                };
+                const loadEntry = async (date) => {
+                    selectedDate = date;
+                    elements.datePicker.value = date;
+                    elements.currentDateDisplay.textContent = formatDateForDisplay(date);
+                    const entry = await window.electronAPI.loadEntry(date);
+                    elements.diaryEntry.value = entry ? entry.content : '';
+                };
 
-        // Shows a brief notification message at the bottom-right of the screen.
-        function showNotification(message, duration = 2000) {
-            notification.textContent = message;
-            notification.classList.remove('opacity-0');
-            setTimeout(() => {
-                notification.classList.add('opacity-0');
-            }, duration);
-        }
+                // --- 4. Attach event listeners ---
+                elements.datePicker.addEventListener('change', (e) => loadEntry(e.target.value));
+                elements.saveButton.addEventListener('click', async () => {
+                    const content = elements.diaryEntry.value;
+                    if (!content.trim()) {
+                        showNotification("Cannot save an empty entry!", 3000);
+                        return;
+                    }
+                    const result = await window.electronAPI.saveEntry({ date: selectedDate, content });
+                    if (result && result.success) {
+                        showNotification('Entry Saved!');
+                        await populateEntryList();
+                    } else {
+                        showNotification('Error: Could not save entry.', 3000);
+                    }
+                });
 
-        // Fetches all entry dates and populates them in the sidebar.
-        async function populateEntryList() {
-            const dates = await window.electronAPI.getAllEntryDates();
-            // Sort dates descending so the most recent entries are at the top
-            dates.sort((a, b) => new Date(b) - new Date(a));
+                // --- 5. Initial application load ---
+                loadEntry(selectedDate);
+                populateEntryList();
 
-            entryList.innerHTML = ''; // Clear the list before repopulating
-            if (dates.length === 0) {
-                entryList.innerHTML = `<p class="text-sm text-gray-500">No past entries yet.</p>`;
-                return;
+            } catch (error) {
+                // If any part of the setup fails, this will catch it and display the error screen.
+                const overlay = document.getElementById('error-overlay');
+                const errorMessage = document.getElementById('error-message');
+                errorMessage.textContent = `Error Details:\n\n${error.message}\n\nStack Trace:\n${error.stack}`;
+                overlay.classList.add('visible');
             }
-
-            dates.forEach(date => {
-                const entryItem = document.createElement('button');
-                entryItem.className = "w-full text-left p-2 rounded-md hover:bg-[#d3cbb7] focus:outline-none focus:bg-[#d3cbb7] transition-colors duration-200";
-                entryItem.textContent = formatDateForDisplay(date);
-                entryItem.onclick = () => loadEntry(date);
-                entryList.appendChild(entryItem);
-            });
-        }
-
-        // --- Event Listeners ---
-
-        // When the user picks a new date, load the entry for that date.
-        datePicker.addEventListener('change', (e) => {
-            loadEntry(e.target.value);
-        });
-
-        // When the user clicks "Save Entry", send the content to the main process.
-        saveButton.addEventListener('click', async () => {
-            const content = diaryEntry.value;
-            if (!content.trim()) {
-                showNotification("Cannot save an empty entry!", 3000);
-                return;
-            }
-            await window.electronAPI.saveEntry({ date: selectedDate, content });
-            showNotification('Entry Saved!');
-            await populateEntryList(); // Refresh the entry list in the sidebar
-        });
-
-        // --- Initial Load ---
-        
-        // When the page's content is fully loaded, initialize the application.
-        window.addEventListener('DOMContentLoaded', () => {
-            loadEntry(selectedDate); // Load today's entry (or a blank one)
-            populateEntryList();   // Load all past entry dates into the sidebar
-        });
+        };
     </script>
 </body>
 </html>
