@@ -1,10 +1,9 @@
-// main.js
+// main.js - With Mood Tracker Logic
 
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-// --- Function to create the application window ---
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -25,41 +24,25 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  // You can uncomment the line below to open DevTools for debugging
-  // mainWindow.webContents.openDevTools();
 }
 
-// --- Application Lifecycle ---
+// --- App Lifecycle ---
 app.whenReady().then(createWindow);
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-
-// --- IPC Handlers for Saving and Loading Data ---
-
-// Get the path to the user's data directory for this app
+// --- IPC Handlers ---
 const diaryPath = path.join(app.getPath('userData'), 'diary-entries');
-
-// Ensure the directory exists
 if (!fs.existsSync(diaryPath)) {
     fs.mkdirSync(diaryPath, { recursive: true });
 }
 
-// Handle the 'save-entry' request from the renderer process
-ipcMain.handle('save-entry', (event, { date, content }) => {
+// MODIFIED: The save handler now accepts and saves the 'mood'.
+ipcMain.handle('save-entry', (event, { date, content, mood }) => {
     try {
         const filePath = path.join(diaryPath, `${date}.json`);
-        // We save the date and content in a JSON object
-        const data = JSON.stringify({ date, content });
+        // The JSON data now includes the mood property.
+        const data = JSON.stringify({ date, content, mood });
         fs.writeFileSync(filePath, data);
         return { success: true };
     } catch (error) {
@@ -68,7 +51,8 @@ ipcMain.handle('save-entry', (event, { date, content }) => {
     }
 });
 
-// Handle the 'load-entry' request
+// NO CHANGE NEEDED: The load handler already reads the whole file,
+// so it will automatically include the mood if it exists.
 ipcMain.handle('load-entry', (event, date) => {
     const filePath = path.join(diaryPath, `${date}.json`);
     if (fs.existsSync(filePath)) {
@@ -80,16 +64,13 @@ ipcMain.handle('load-entry', (event, date) => {
             return null;
         }
     }
-    return null; // No entry found
+    return null;
 });
 
-// Handle the 'get-all-entry-dates' request
 ipcMain.handle('get-all-entry-dates', () => {
     try {
         const files = fs.readdirSync(diaryPath);
-        return files
-            .filter(file => file.endsWith('.json'))
-            .map(file => file.replace('.json', ''));
+        return files.filter(file => file.endsWith('.json')).map(file => file.replace('.json', ''));
     } catch (error) {
         console.error("Error getting all entry dates:", error);
         return [];

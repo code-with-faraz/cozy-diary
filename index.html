@@ -7,13 +7,11 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Gaegu:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        /* --- Self-Contained CSS - No Internet Required --- */
         :root {
             --bg-color: #fdf6e3; --sidebar-bg: #eee8d5; --text-color: #657b83;
             --header-color: #b58900; --accent-color: #268bd2; --accent-hover: #2aa198;
             --date-color: #cb4b16; --border-color: #d3cbb7; --notification-bg: #859900;
         }
-        /* Cozy font-face: Comic Sans MS as fallback, or Segoe Print if available */
         @font-face {
             font-family: 'CozyHand';
             src: local('Segoe Print'), local('Comic Sans MS');
@@ -77,6 +75,29 @@
             background-color: #450a0a; padding: 1rem; border-radius: 0.5rem;
             text-align: left; font-size: 0.875rem; white-space: pre-wrap; font-family: monospace; margin-top: 1rem;
         }
+
+        /* <!-- NEW: Styles for the mood tracker --> */
+        .mood-btn {
+            transition: transform 0.2s, filter 0.2s;
+            filter: grayscale(60%);
+            opacity: 0.7;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 2.25rem; /* Larger emoji size */
+            padding: 0;
+        }
+        .mood-btn:hover {
+            transform: scale(1.1);
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+        .mood-btn.selected {
+            transform: scale(1.15);
+            filter: grayscale(0%);
+            opacity: 1;
+            text-shadow: 0 0 10px var(--header-color);
+        }
     </style>
 </head>
 <body>
@@ -88,7 +109,23 @@
             <div id="entry-list"></div>
         </div>
         <div class="main-content">
-            <div class="main-header"><h2 id="current-date-display"></h2><button id="save-button">Save Entry</button></div>
+            <div class="main-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h2 id="current-date-display"></h2>
+                    <!-- NEW: This span will show the selected mood next to the date -->
+                    <span id="mood-display" style="font-size: 2rem;"></span>
+                </div>
+                <button id="save-button">Save Entry</button>
+            </div>
+            <!-- NEW: Mood Tracker Buttons -->
+            <div id="mood-tracker" style="margin-bottom: 1rem; display: flex; gap: 0.75rem;">
+                <button class="mood-btn" data-mood="😭">😭</button>
+                <button class="mood-btn" data-mood="🥲">🥲</button>
+                <button class="mood-btn" data-mood="🙂">🙂</button>
+                <button class="mood-btn" data-mood="😣">😣</button>
+                <button class="mood-btn" data-mood="😢">😢</button>
+                <button class="mood-btn" data-mood="🙂‍↔️">🙂‍↔️</button>
+            </div>
             <textarea id="diary-entry" placeholder="What's on your mind today?"></textarea>
         </div>
     </div>
@@ -112,12 +149,15 @@
                     saveButton: document.getElementById('save-button'),
                     entryList: document.getElementById('entry-list'),
                     notification: document.getElementById('notification'),
+                    moodDisplay: document.getElementById('mood-display'), // NEW
+                    moodButtons: document.querySelectorAll('.mood-btn'), // NEW
                 };
                 for (const key in elements) {
                     if (!elements[key]) throw new Error(`Essential HTML element with id '${key}' could not be found.`);
                 }
 
                 let selectedDate = new Date().toISOString().split('T')[0];
+                let selectedMood = null; // NEW: State for the selected mood
 
                 // --- 3. Define all functions ---
                 const formatDateForDisplay = (dateString) => new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -126,6 +166,20 @@
                     elements.notification.style.opacity = '1';
                     setTimeout(() => { elements.notification.style.opacity = '0'; }, duration);
                 };
+                
+                // NEW: Function to update the mood UI
+                const updateMoodUI = (mood) => {
+                    selectedMood = mood;
+                    elements.moodDisplay.textContent = mood || '';
+                    elements.moodButtons.forEach(btn => {
+                        if (btn.dataset.mood === mood) {
+                            btn.classList.add('selected');
+                        } else {
+                            btn.classList.remove('selected');
+                        }
+                    });
+                };
+
                 const populateEntryList = async () => {
                     const dates = await window.electronAPI.getAllEntryDates();
                     dates.sort((a, b) => new Date(b) - new Date(a));
@@ -141,23 +195,30 @@
                         elements.entryList.appendChild(entryItem);
                     });
                 };
+
+                // MODIFIED: loadEntry now handles moods
                 const loadEntry = async (date) => {
                     selectedDate = date;
                     elements.datePicker.value = date;
                     elements.currentDateDisplay.textContent = formatDateForDisplay(date);
                     const entry = await window.electronAPI.loadEntry(date);
                     elements.diaryEntry.value = entry ? entry.content : '';
+                    // Load the mood if it exists, otherwise reset it
+                    updateMoodUI(entry ? entry.mood : null);
                 };
 
                 // --- 4. Attach event listeners ---
                 elements.datePicker.addEventListener('change', (e) => loadEntry(e.target.value));
+                
+                // MODIFIED: saveButton now saves the mood
                 elements.saveButton.addEventListener('click', async () => {
                     const content = elements.diaryEntry.value;
-                    if (!content.trim()) {
+                    if (!content.trim() && !selectedMood) {
                         showNotification("Cannot save an empty entry!", 3000);
                         return;
                     }
-                    const result = await window.electronAPI.saveEntry({ date: selectedDate, content });
+                    // Include the selectedMood in the data object
+                    const result = await window.electronAPI.saveEntry({ date: selectedDate, content, mood: selectedMood });
                     if (result && result.success) {
                         showNotification('Entry Saved!');
                         await populateEntryList();
@@ -166,12 +227,24 @@
                     }
                 });
 
+                // NEW: Add event listeners for all mood buttons
+                elements.moodButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const newMood = button.dataset.mood;
+                        // Allow deselecting a mood by clicking it again
+                        if (selectedMood === newMood) {
+                            updateMoodUI(null);
+                        } else {
+                            updateMoodUI(newMood);
+                        }
+                    });
+                });
+
                 // --- 5. Initial application load ---
                 loadEntry(selectedDate);
                 populateEntryList();
 
             } catch (error) {
-                // If any part of the setup fails, this will catch it and display the error screen.
                 const overlay = document.getElementById('error-overlay');
                 const errorMessage = document.getElementById('error-message');
                 errorMessage.textContent = `Error Details:\n\n${error.message}\n\nStack Trace:\n${error.stack}`;
